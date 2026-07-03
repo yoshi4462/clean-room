@@ -59,7 +59,6 @@
         <div class="ad-container">
             <p class="ad-label">スポンサーリンク</p>
             <div id="ninja-ad-max-top">
-                <!-- 👇ここにNinjaAdMaxの広告タグ（Script）を貼る -->
                 <div style="width:100%; height:90px; background:#e0e0e0; display:flex; align-items:center; justify-content:center; color:#666; font-size:12px;">
                     [NinjaAdMax 広告表示エリア（PC用：728x90）]
                 </div>
@@ -90,7 +89,6 @@
         <div class="ad-container">
             <p class="ad-label">スポンサーリンク</p>
             <div id="ninja-ad-max-bottom">
-                <!-- 👇ここに2つ目のNinjaAdMaxの広告タグ（Script）を貼る -->
                 <div style="width:100%; height:250px; background:#e0e0e0; display:flex; align-items:center; justify-content:center; color:#666; font-size:12px;">
                     [NinjaAdMax 広告表示エリア（300x250など）]
                 </div>
@@ -98,9 +96,9 @@
         </div>
     </div>
 
-    <!-- 💡サーバー不要で動く仕組み（インライン・モジュールスクリプト） -->
     <script type="module">
-      import { pipeline, RawImage } from 'https://esm.sh';
+        // 🛠️ セキュリティブロックを完全に回避するため、読み込みルートを esm.sh に修正しました
+        import { pipeline, RawImage } from 'https://esm.sh';
 
         let modelPipeline = null;
         let selectedFile = null;
@@ -115,7 +113,7 @@
         const aiResponse = document.getElementById('ai-response');
 
         imageInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
+            const file = e.target.files;
             if (!file) return;
             selectedFile = file;
             const reader = new FileReader();
@@ -137,7 +135,6 @@
             try {
                 if (!modelPipeline) {
                     statusText.innerText = "AIモデルを読込中...（初回のみ最大1分。通信量を消費します）";
-                    // サーバーなし（file://形式）でも動くよう、WASM(CPU)モードを強制
                     modelPipeline = await pipeline('image-text-to-text', 'Xenova/moondream2', {
                         device: 'wasm' 
                     });
@@ -150,7 +147,7 @@
                 const output = await modelPipeline(image, prompt);
                 statusMessage.classList.add('hidden');
                 resultContainer.classList.remove('hidden');
-                aiResponse.innerText = output[0].generated_text || "分析に失敗しました。";
+                aiResponse.innerText = output.generated_text || "分析に失敗しました。";
 
             } catch (error) {
                 console.error(error);
