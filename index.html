@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIお部屋お片付けアドバイザー</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --primary-hover: #357abd;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --text-color: #333333;
+            --border-radius: 12px;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-background);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        h1 { text-align: center; color: #2c3e50; font-size: 24px; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #7f8c8d; font-size: 14px; margin-bottom: 25px; }
+        .ad-container { margin: 20px 0; padding: 10px; background: #fafafa; border: 1px dashed #ddd; text-align: center; border-radius: 6px; }
+        .ad-label { margin: 0 0 5px 0; font-size: 10px; color: #999; text-align: left; }
+        .main-content { margin: 30px 0; }
+        .upload-section { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .upload-button { background-color: var(--primary-color); color: white; padding: 14px 28px; border-radius: 50px; cursor: pointer; font-weight: bold; }
+        #preview-container { width: 100%; max-height: 400px; overflow: hidden; border-radius: var(--border-radius); display: flex; justify-content: center; background: #000; }
+        #image-preview { max-width: 100%; max-height: 400px; object-fit: contain; }
+        #analyze-button { width: 100%; padding: 15px; background-color: #2ecc71; color: white; border: none; border-radius: var(--border-radius); font-size: 16px; font-weight: bold; cursor: pointer; }
+        #analyze-button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .status-box { display: flex; align-items: center; justify-content: center; gap: 15px; background: #e8f4fd; padding: 15px; border-radius: var(--border-radius); color: #2980b9; margin-top: 20px; font-weight: bold; }
+        .spinner { width: 20px; height: 20px; border: 3px solid #3498db; border-top: 3px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #result-container { margin-top: 30px; padding: 20px; background: #fdfefe; border-left: 5px solid #2ecc71; }
+        #ai-response { line-height: 1.8; white-space: pre-wrap; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🧹 AIお部屋お片付けアドバイザー</h1>
+        <p class="subtitle">部屋の写真をアップロードするだけ！あなたのCPUで安全にAIが分析します（完全無料）</p>
+
+        <!-- 上部 広告枠 -->
+        <div class="ad-container">
+            <p class="ad-label">スポンサーリンク</p>
+            <div id="ninja-ad-max-top">
+                <!-- 👇ここにNinjaAdMaxの広告タグ（Script）を貼る -->
+                <div style="width:100%; height:90px; background:#e0e0e0; display:flex; align-items:center; justify-content:center; color:#666; font-size:12px;">
+                    [NinjaAdMax 広告表示エリア（PC用：728x90）]
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <label for="image-input" class="upload-button">📸 部屋の写真を撮影・選択</label>
+                <input type="file" id="image-input" accept="image/*" style="display: none;">
+                <div id="preview-container" class="hidden"><img id="image-preview" src=""></div>
+                <button id="analyze-button" disabled>✨ 片付けアドバイスをもらう</button>
+            </div>
+
+            <div class="result-section">
+                <div id="status-message" class="status-box hidden">
+                    <div class="spinner"></div>
+                    <span id="status-text">AIモデルを準備中...</span>
+                </div>
+                <div id="result-container" class="hidden">
+                    <h2>📋 AIからのアドバイス</h2>
+                    <div id="ai-response"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下部 広告枠 -->
+        <div class="ad-container">
+            <p class="ad-label">スポンサーリンク</p>
+            <div id="ninja-ad-max-bottom">
+                <!-- 👇ここに2つ目のNinjaAdMaxの広告タグ（Script）を貼る -->
+                <div style="width:100%; height:250px; background:#e0e0e0; display:flex; align-items:center; justify-content:center; color:#666; font-size:12px;">
+                    [NinjaAdMax 広告表示エリア（300x250など）]
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 💡サーバー不要で動く仕組み（インライン・モジュールスクリプト） -->
+    <script type="module">
+        import { pipeline, RawImage } from 'https://jsdelivr.net';
+
+        let modelPipeline = null;
+        let selectedFile = null;
+
+        const imageInput = document.getElementById('image-input');
+        const imagePreview = document.getElementById('image-preview');
+        const previewContainer = document.getElementById('preview-container');
+        const analyzeButton = document.getElementById('analyze-button');
+        const statusMessage = document.getElementById('status-message');
+        const statusText = document.getElementById('status-text');
+        const resultContainer = document.getElementById('result-container');
+        const aiResponse = document.getElementById('ai-response');
+
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                imagePreview.src = event.target.result;
+                previewContainer.classList.remove('hidden');
+                analyzeButton.disabled = false;
+                resultContainer.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+
+        analyzeButton.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            analyzeButton.disabled = true;
+            statusMessage.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+
+            try {
+                if (!modelPipeline) {
+                    statusText.innerText = "AIモデルを読込中...（初回のみ最大1分。通信量を消費します）";
+                    // サーバーなし（file://形式）でも動くよう、WASM(CPU)モードを強制
+                    modelPipeline = await pipeline('image-text-to-text', 'Xenova/moondream2', {
+                        device: 'wasm' 
+                    });
+                }
+
+                statusText.innerText = "写真を分析中...";
+                const image = await RawImage.fromURL(imagePreview.src);
+                const prompt = "Describe what needs to be cleaned, organized, or improved in this room. Give 3 specific actionable advices in Japanese.";
+                
+                const output = await modelPipeline(image, prompt);
+                statusMessage.classList.add('hidden');
+                resultContainer.classList.remove('hidden');
+                aiResponse.innerText = output[0].generated_text || "分析に失敗しました。";
+
+            } catch (error) {
+                console.error(error);
+                statusMessage.classList.add('hidden');
+                alert("エラーが発生しました。パソコンのスペックやブラウザの設定（Chrome/Edge推奨）を確認してください。");
+            } finally {
+                analyzeButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
