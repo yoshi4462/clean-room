@@ -96,9 +96,9 @@
         </div>
     </div>
 
+    <!-- 💡 最もエラーが出にくい公式推奨の unpkg 配信ルートに変更しました -->
     <script type="module">
-        // 🛠️ セキュリティブロックを完全に回避するため、読み込みルートを esm.sh に修正しました
-        import { pipeline, RawImage } from 'https://esm.sh';
+        import { pipeline, RawImage } from 'https://unpkg.com';
 
         let modelPipeline = null;
         let selectedFile = null;
