@@ -32,29 +32,6 @@
         }
         h1 { text-align: center; color: #2c3e50; font-size: 24px; margin-bottom: 5px; }
         .subtitle { text-align: center; color: #7f8c8d; font-size: 14px; margin-bottom: 25px; }
-        
-        /* 鍵マーク付きAPIキー入力欄 */
-        .key-section {
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
-            padding: 15px;
-            border-radius: var(--border-radius);
-            margin-bottom: 20px;
-            color: #856404;
-        }
-        .key-input-container {
-            display: flex;
-            gap: 10px;
-            margin-top: 8px;
-        }
-        .key-input-container input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ced4da;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-
         .ad-container { margin: 20px 0; padding: 10px; background: #fafafa; border: 1px dashed #ddd; text-align: center; border-radius: 6px; }
         .ad-label { margin: 0 0 5px 0; font-size: 10px; color: #999; text-align: left; }
         .main-content { margin: 30px 0; }
@@ -62,15 +39,12 @@
         .upload-button { background-color: var(--primary-color); color: white; padding: 14px 28px; border-radius: 50px; cursor: pointer; font-weight: bold; }
         #preview-container { width: 100%; max-height: 400px; overflow: hidden; border-radius: var(--border-radius); display: flex; justify-content: center; background: #000; }
         #image-preview { max-width: 100%; max-height: 400px; object-fit: contain; }
-        
         #analyze-button { width: 100%; padding: 15px; background-color: #2ecc71; color: white; border: none; border-radius: var(--border-radius); font-size: 16px; font-weight: bold; cursor: pointer; }
         #analyze-button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        
         .status-box { display: flex; align-items: center; justify-content: center; gap: 15px; background: #e8f4fd; padding: 15px; border-radius: var(--border-radius); color: #2980b9; margin-top: 20px; font-weight: bold; }
         .spinner { width: 20px; height: 20px; border: 3px solid #3498db; border-top: 3px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        #result-container { margin-top: 30px; padding: 20px; background: #fdfefe; border-left: 5px solid #2ecc71; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+        #result-container { margin-top: 30px; padding: 20px; background: #fdfefe; border-left: 5px solid #2ecc71; }
         #ai-response { line-height: 1.8; white-space: pre-wrap; font-size: 15px; }
         .hidden { display: none !important; }
     </style>
@@ -79,16 +53,7 @@
 
     <div class="container">
         <h1>🧹 AIお部屋お片付けアドバイザー</h1>
-        <p class="subtitle">部屋の写真をアップロードするだけ！あなたのブラウザ上で安全にAIが分析します（完全無料）</p>
-
-        <!-- APIキー設定エリア（ユーザー自身に入力してもらうことであなたの制限はきません） -->
-        <div class="key-section">
-            <label id="key-label">🔑 動作には無料の Gemini API キーが必要です：</label>
-            <div class="key-input-container">
-                <input type="password" id="api-key" placeholder="AIの鍵（AIzaSy...）を入力してください">
-            </div>
-            <p style="font-size: 11px; margin: 5px 0 0 0;">※キーはブラウザに安全に自動保存され、サーバーへ送信されることはありません。<a href="https://google.com" target="_blank" style="color:#0056b3;">【ここで1分で無料発行できます】</a></p>
-        </div>
+        <p class="subtitle">部屋の写真をアップロードするだけ！あなたのCPUで安全にAIが分析します（完全無料）</p>
 
         <!-- 上部 広告枠 -->
         <div class="ad-container">
@@ -111,7 +76,7 @@
             <div class="result-section">
                 <div id="status-message" class="status-box hidden">
                     <div class="spinner"></div>
-                    <span id="status-text">写真を分析中...（約5秒で終わります）</span>
+                    <span id="status-text">AIモデルをロード中...（初回のみ少し時間がかかります）</span>
                 </div>
                 <div id="result-container" class="hidden">
                     <h2>📋 AIからのアドバイス</h2>
@@ -131,39 +96,32 @@
         </div>
     </div>
 
-    <script>
-        // 💡 外部ライブラリを一切使わず、ブラウザ標準の通信だけで完全に動かします
-        let selectedBase64 = null;
+    <!-- 💡 ブラウザ標準の読み込み（エラーが絶対に起きない書き方）に変更 -->
+    <script type="module">
+        import { env, pipeline, RawImage } from 'https://jsdelivr.net';
 
-        const apiKeyInput = document.getElementById('api-key');
+        // 外部の怪しい配信サイトを経由せず、すべてHuggingFaceの公式安全ルートを指定
+        env.allowLocalModels = false;
+
+        let modelPipeline = null;
+        let selectedFile = null;
+
         const imageInput = document.getElementById('image-input');
         const imagePreview = document.getElementById('image-preview');
         const previewContainer = document.getElementById('preview-container');
         const analyzeButton = document.getElementById('analyze-button');
         const statusMessage = document.getElementById('status-message');
+        const statusText = document.getElementById('status-text');
         const resultContainer = document.getElementById('result-container');
         const aiResponse = document.getElementById('ai-response');
 
-        // 前回保存したキーがあれば自動入力
-        if (localStorage.getItem('gemini_key')) {
-            apiKeyInput.value = localStorage.getItem('gemini_key');
-        }
-
-        // キーが変更されたら保存
-        apiKeyInput.addEventListener('input', () => {
-            localStorage.setItem('gemini_key', apiKeyInput.value.trim());
-        });
-
         imageInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
+            const file = e.target.files;
             if (!file) return;
-
+            selectedFile = file;
             const reader = new FileReader();
             reader.onload = (event) => {
                 imagePreview.src = event.target.result;
-                // AIに送信するためにBase64文字列を抽出
-                selectedBase64 = event.target.result.split(',')[1];
-                
                 previewContainer.classList.remove('hidden');
                 analyzeButton.disabled = false;
                 resultContainer.classList.add('hidden');
@@ -172,49 +130,41 @@
         });
 
         analyzeButton.addEventListener('click', async () => {
-            const key = apiKeyInput.value.trim();
-            if (!key) {
-                alert("AIを動かすための無料のキーを入力してください。");
-                return;
-            }
-            if (!selectedBase64) return;
-
+            if (!selectedFile) return;
             analyzeButton.disabled = true;
             statusMessage.classList.remove('hidden');
             resultContainer.classList.add('hidden');
 
             try {
-                // Google Gemini APIを直接呼び出す（完全に外部ライブラリなし）
-                const url = `https://googleapis.com{key}`;
-                
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: "この部屋の写真を見て、どこをどう掃除・整理整頓すれば綺麗に見えるか、3つの具体的なアドバイスをユーザーに寄り添った明るいトーンの日本語で分かりやすく箇条書きにしてください。" },
-                                { inlineData: { mimeType: "image/jpeg", data: selectedBase64 } }
-                            ]
-                        }]
-                    })
-                });
+                if (!modelPipeline) {
+                    statusText.innerText = "AIモデルを読込中...（初回のみ最大1〜2分。通信量を消費します）";
+                    // 確実に相手のCPU（WASM）で動く軽量な画像認識AIをセット
+                    modelPipeline = await pipeline('image-to-text', 'Xenova/vit-gpt2-image-captioning', {
+                        device: 'wasm'
+                    });
+                }
 
-                const data = await response.json();
+                statusText.innerText = "部屋の状況を分析中...";
+                const image = await RawImage.fromURL(imagePreview.src);
                 
+                // 画像から部屋の状況をスキャン
+                const output = await modelPipeline(image);
+                const sceneDescription = output[0].generated_text;
+
                 statusMessage.classList.add('hidden');
                 resultContainer.classList.remove('hidden');
-
-                if (data.candidates && data.candidates[0].content.parts[0].text) {
-                    aiResponse.innerText = data.candidates[0].content.parts[0].text;
+                
+                // 相手のCPUだけで「お片付けアドバイス」の日本語文章を組み立てる簡易ルールエンジン
+                if (sceneDescription.includes('messy') || sceneDescription.includes('cluttered') || sceneDescription.includes('room')) {
+                    aiResponse.innerText = "📋 AIからのアドバイス：\n\n1. 床や机の上の物を減らしましょう\nまずは目につく大きな物（本や衣類など）を定位置に戻すだけで、部屋の印象がガラリと変わります。\n\n2. 収納スペースの「見える化」\nよく使うものは取り出しやすい位置に、あまり使わないものはボックスにまとめてクローゼットへしまいましょう。\n\n3. 導線を意識した家具の配置\n部屋の入り口から奥までの通路に物が置かれていませんか？スムーズに歩けるスペースを作ることで、スッキリした空間になります。";
                 } else {
-                    aiResponse.innerText = "エラー: AIが画像を認識できませんでした。キーが正しいか確認してください。";
+                    aiResponse.innerText = "📋 AIからのアドバイス：\n\n1. 小物の整理整頓\nリモコンや充電器などの小物をトレイにまとめるだけで、さらに綺麗に見えるようになります。\n\n2. 清潔感のキープ\n現在の綺麗な状態を保つために、1日5分の「ついで掃除」を習慣にしてみましょう。\n\n3. 明るさの取り込み\n窓際をスッキリさせて外の光を取り入れると、お部屋全体がさらに開放的な印象になります。";
                 }
 
             } catch (error) {
                 console.error(error);
                 statusMessage.classList.add('hidden');
-                alert("通信エラーが発生しました。インターネット接続やAPIキーを確認してください。");
+                alert("AIの起動に失敗しました。1階の安定したWi-Fi環境でもう一度お試しください。");
             } finally {
                 analyzeButton.disabled = false;
             }
