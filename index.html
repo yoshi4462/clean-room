@@ -96,11 +96,10 @@
         </div>
     </div>
 
-    <!-- 💡 ブラウザ標準の読み込み（エラーが絶対に起きない書き方）に変更 -->
+    <!-- 💡 利用者の手間はゼロ。相手のCPU（WASM）で完全に完結する仕組み -->
     <script type="module">
         import { env, pipeline, RawImage } from 'https://jsdelivr.net';
 
-        // 外部の怪しい配信サイトを経由せず、すべてHuggingFaceの公式安全ルートを指定
         env.allowLocalModels = false;
 
         let modelPipeline = null;
@@ -138,7 +137,7 @@
             try {
                 if (!modelPipeline) {
                     statusText.innerText = "AIモデルを読込中...（初回のみ最大1〜2分。通信量を消費します）";
-                    // 確実に相手のCPU（WASM）で動く軽量な画像認識AIをセット
+                    // 利用者のブラウザ（CPU）で動く超軽量の画像キャプションAI
                     modelPipeline = await pipeline('image-to-text', 'Xenova/vit-gpt2-image-captioning', {
                         device: 'wasm'
                     });
@@ -147,14 +146,14 @@
                 statusText.innerText = "部屋の状況を分析中...";
                 const image = await RawImage.fromURL(imagePreview.src);
                 
-                // 画像から部屋の状況をスキャン
+                // 相手のパソコンのパワーだけで写真を解析
                 const output = await modelPipeline(image);
-                const sceneDescription = output[0].generated_text;
+                const sceneDescription = output.generated_text;
 
                 statusMessage.classList.add('hidden');
                 resultContainer.classList.remove('hidden');
                 
-                // 相手のCPUだけで「お片付けアドバイス」の日本語文章を組み立てる簡易ルールエンジン
+                // 解析結果をもとに、相手のCPU内で日本語アドバイスを自動生成
                 if (sceneDescription.includes('messy') || sceneDescription.includes('cluttered') || sceneDescription.includes('room')) {
                     aiResponse.innerText = "📋 AIからのアドバイス：\n\n1. 床や机の上の物を減らしましょう\nまずは目につく大きな物（本や衣類など）を定位置に戻すだけで、部屋の印象がガラリと変わります。\n\n2. 収納スペースの「見える化」\nよく使うものは取り出しやすい位置に、あまり使わないものはボックスにまとめてクローゼットへしまいましょう。\n\n3. 導線を意識した家具の配置\n部屋の入り口から奥までの通路に物が置かれていませんか？スムーズに歩けるスペースを作ることで、スッキリした空間になります。";
                 } else {
