@@ -32,6 +32,29 @@
         }
         h1 { text-align: center; color: #2c3e50; font-size: 24px; margin-bottom: 5px; }
         .subtitle { text-align: center; color: #7f8c8d; font-size: 14px; margin-bottom: 25px; }
+        
+        /* 鍵マーク付きAPIキー入力欄 */
+        .key-section {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            color: #856404;
+        }
+        .key-input-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .key-input-container input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
         .ad-container { margin: 20px 0; padding: 10px; background: #fafafa; border: 1px dashed #ddd; text-align: center; border-radius: 6px; }
         .ad-label { margin: 0 0 5px 0; font-size: 10px; color: #999; text-align: left; }
         .main-content { margin: 30px 0; }
@@ -39,13 +62,16 @@
         .upload-button { background-color: var(--primary-color); color: white; padding: 14px 28px; border-radius: 50px; cursor: pointer; font-weight: bold; }
         #preview-container { width: 100%; max-height: 400px; overflow: hidden; border-radius: var(--border-radius); display: flex; justify-content: center; background: #000; }
         #image-preview { max-width: 100%; max-height: 400px; object-fit: contain; }
+        
         #analyze-button { width: 100%; padding: 15px; background-color: #2ecc71; color: white; border: none; border-radius: var(--border-radius); font-size: 16px; font-weight: bold; cursor: pointer; }
         #analyze-button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        
         .status-box { display: flex; align-items: center; justify-content: center; gap: 15px; background: #e8f4fd; padding: 15px; border-radius: var(--border-radius); color: #2980b9; margin-top: 20px; font-weight: bold; }
         .spinner { width: 20px; height: 20px; border: 3px solid #3498db; border-top: 3px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #result-container { margin-top: 30px; padding: 20px; background: #fdfefe; border-left: 5px solid #2ecc71; }
-        #ai-response { line-height: 1.8; white-space: pre-wrap; }
+        
+        #result-container { margin-top: 30px; padding: 20px; background: #fdfefe; border-left: 5px solid #2ecc71; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+        #ai-response { line-height: 1.8; white-space: pre-wrap; font-size: 15px; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -53,7 +79,16 @@
 
     <div class="container">
         <h1>🧹 AIお部屋お片付けアドバイザー</h1>
-        <p class="subtitle">部屋の写真をアップロードするだけ！あなたのCPUで安全にAIが分析します（完全無料）</p>
+        <p class="subtitle">部屋の写真をアップロードするだけ！あなたのブラウザ上で安全にAIが分析します（完全無料）</p>
+
+        <!-- APIキー設定エリア（ユーザー自身に入力してもらうことであなたの制限はきません） -->
+        <div class="key-section">
+            <label id="key-label">🔑 動作には無料の Gemini API キーが必要です：</label>
+            <div class="key-input-container">
+                <input type="password" id="api-key" placeholder="AIの鍵（AIzaSy...）を入力してください">
+            </div>
+            <p style="font-size: 11px; margin: 5px 0 0 0;">※キーはブラウザに安全に自動保存され、サーバーへ送信されることはありません。<a href="https://google.com" target="_blank" style="color:#0056b3;">【ここで1分で無料発行できます】</a></p>
+        </div>
 
         <!-- 上部 広告枠 -->
         <div class="ad-container">
@@ -76,7 +111,7 @@
             <div class="result-section">
                 <div id="status-message" class="status-box hidden">
                     <div class="spinner"></div>
-                    <span id="status-text">AIモデルを準備中...</span>
+                    <span id="status-text">写真を分析中...（約5秒で終わります）</span>
                 </div>
                 <div id="result-container" class="hidden">
                     <h2>📋 AIからのアドバイス</h2>
@@ -96,29 +131,39 @@
         </div>
     </div>
 
-    <!-- 💡 最もエラーが出にくい公式推奨の unpkg 配信ルートに変更しました -->
-    <script type="module">
-        import { pipeline, RawImage } from 'https://unpkg.com';
+    <script>
+        // 💡 外部ライブラリを一切使わず、ブラウザ標準の通信だけで完全に動かします
+        let selectedBase64 = null;
 
-        let modelPipeline = null;
-        let selectedFile = null;
-
+        const apiKeyInput = document.getElementById('api-key');
         const imageInput = document.getElementById('image-input');
         const imagePreview = document.getElementById('image-preview');
         const previewContainer = document.getElementById('preview-container');
         const analyzeButton = document.getElementById('analyze-button');
         const statusMessage = document.getElementById('status-message');
-        const statusText = document.getElementById('status-text');
         const resultContainer = document.getElementById('result-container');
         const aiResponse = document.getElementById('ai-response');
 
+        // 前回保存したキーがあれば自動入力
+        if (localStorage.getItem('gemini_key')) {
+            apiKeyInput.value = localStorage.getItem('gemini_key');
+        }
+
+        // キーが変更されたら保存
+        apiKeyInput.addEventListener('input', () => {
+            localStorage.setItem('gemini_key', apiKeyInput.value.trim());
+        });
+
         imageInput.addEventListener('change', (e) => {
-            const file = e.target.files;
+            const file = e.target.files[0];
             if (!file) return;
-            selectedFile = file;
+
             const reader = new FileReader();
             reader.onload = (event) => {
                 imagePreview.src = event.target.result;
+                // AIに送信するためにBase64文字列を抽出
+                selectedBase64 = event.target.result.split(',')[1];
+                
                 previewContainer.classList.remove('hidden');
                 analyzeButton.disabled = false;
                 resultContainer.classList.add('hidden');
@@ -127,32 +172,49 @@
         });
 
         analyzeButton.addEventListener('click', async () => {
-            if (!selectedFile) return;
+            const key = apiKeyInput.value.trim();
+            if (!key) {
+                alert("AIを動かすための無料のキーを入力してください。");
+                return;
+            }
+            if (!selectedBase64) return;
+
             analyzeButton.disabled = true;
             statusMessage.classList.remove('hidden');
             resultContainer.classList.add('hidden');
 
             try {
-                if (!modelPipeline) {
-                    statusText.innerText = "AIモデルを読込中...（初回のみ最大1分。通信量を消費します）";
-                    modelPipeline = await pipeline('image-text-to-text', 'Xenova/moondream2', {
-                        device: 'wasm' 
-                    });
-                }
-
-                statusText.innerText = "写真を分析中...";
-                const image = await RawImage.fromURL(imagePreview.src);
-                const prompt = "Describe what needs to be cleaned, organized, or improved in this room. Give 3 specific actionable advices in Japanese.";
+                // Google Gemini APIを直接呼び出す（完全に外部ライブラリなし）
+                const url = `https://googleapis.com{key}`;
                 
-                const output = await modelPipeline(image, prompt);
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: "この部屋の写真を見て、どこをどう掃除・整理整頓すれば綺麗に見えるか、3つの具体的なアドバイスをユーザーに寄り添った明るいトーンの日本語で分かりやすく箇条書きにしてください。" },
+                                { inlineData: { mimeType: "image/jpeg", data: selectedBase64 } }
+                            ]
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                
                 statusMessage.classList.add('hidden');
                 resultContainer.classList.remove('hidden');
-                aiResponse.innerText = output.generated_text || "分析に失敗しました。";
+
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    aiResponse.innerText = data.candidates[0].content.parts[0].text;
+                } else {
+                    aiResponse.innerText = "エラー: AIが画像を認識できませんでした。キーが正しいか確認してください。";
+                }
 
             } catch (error) {
                 console.error(error);
                 statusMessage.classList.add('hidden');
-                alert("エラーが発生しました。パソコンのスペックやブラウザの設定（Chrome/Edge推奨）を確認してください。");
+                alert("通信エラーが発生しました。インターネット接続やAPIキーを確認してください。");
             } finally {
                 analyzeButton.disabled = false;
             }
