@@ -5,9 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AIお部屋お片付けアドバイザー</title>
     <style>
-        :root { --primary-color: #4a90e2; --primary-hover: #357abd; --background-color: #f8f9fa; --card-background: #ffffff; --text-color: #333333; --border-radius: 12px; }
-        body { font-family: Arial, sans-serif; background-color: var(--background-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 800px; background: var(--card-background); padding: 30px; border-radius: var(--border-radius); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        :root {
+            --primary-color: #4a90e2;
+            --primary-hover: #357abd;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --text-color: #333333;
+            --border-radius: 12px;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-background);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
         h1 { text-align: center; color: #2c3e50; font-size: 24px; margin-bottom: 5px; }
         .subtitle { text-align: center; color: #7f8c8d; font-size: 14px; margin-bottom: 25px; }
         .ad-container { margin: 20px 0; padding: 10px; background: #fafafa; border: 1px dashed #ddd; text-align: center; border-radius: 6px; }
@@ -28,15 +50,21 @@
     </style>
 </head>
 <body>
+
     <div class="container">
         <h1>🧹 AIお部屋お片付けアドバイザー</h1>
         <p class="subtitle">部屋の写真をアップロードするだけ！安心のオンデバイスAI（ローカルAI）設計で完全無料です</p>
+
+        <!-- 上部 広告枠 -->
         <div class="ad-container">
             <p class="ad-label">スポンサーリンク</p>
             <div id="ninja-ad-max-top">
-                <div style="width:100%; height:90px; background:#e0e0e0; display:flex; align-items:center; justify-content:center; color:#666; font-size:12px;">[NinjaAdMax 広告表示エリア]</div>
+                <div style="width:100%; height:90px; background:#e0e0e0; display:flex; align-items:center; justify-content:center; color:#666; font-size:12px;">
+                    [NinjaAdMax 広告表示エリア（PC用：728x90）]
+                </div>
             </div>
         </div>
+
         <div class="main-content">
             <div class="upload-section">
                 <label for="image-input" class="upload-button">📸 部屋の写真を撮影・選択</label>
@@ -44,24 +72,43 @@
                 <div id="preview-container" class="hidden"><img id="image-preview" src=""></div>
                 <button id="analyze-button" disabled>✨ 片付けアドバイスをもらう</button>
             </div>
+
             <div class="result-section">
-                <div id="status-message" class="status-box hidden"><div class="spinner"></div><span id="status-text">オンデバイスAIが写真を分析中...（約2秒）</span></div>
-                <div id="result-container" class="hidden"><h2>📋 AIからのアドバイス</h2><div id="ai-response"></div></div>
+                <div id="status-message" class="status-box hidden">
+                    <div class="spinner"></div>
+                    <span id="status-text">オンデバイスAIが写真を分析中...（約2秒）</span>
+                </div>
+                <div id="result-container" class="hidden">
+                    <h2>📋 AIからのアドバイス</h2>
+                    <div id="ai-response"></div>
+                </div>
             </div>
         </div>
+
+        <!-- 下部 広告枠 -->
         <div class="ad-container">
             <p class="ad-label">スポンサーリンク</p>
             <div id="ninja-ad-max-bottom">
-                <div style="width:100%; height:250px; background:#e0e0e0; display:flex; align-items:center; justify-content:center; color:#666; font-size:12px;">[NinjaAdMax 広告表示エリア]</div>
+                <div style="width:100%; height:250px; background:#e0e0e0; display:flex; align-items:center; justify-content:center; color:#666; font-size:12px;">
+                    [NinjaAdMax 広告表示エリア（300x250など）]
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- 超安定のGoogle Hosted Librariesを使用 -->
     <script src="https://googleapis.com"></script>
     <script>
         let selectedImage = null;
+
+        // 画像が選ばれたときの処理（エラーを完全に防ぐ安全な書き方に修正）
         document.getElementById('image-input').addEventListener('change', (e) => {
-            const file = e.target.files; if (!file) return;
+            const files = e.target.files;
+            if (!files || files.length === 0) return; // ファイルが空っぽなら処理を中断
+
+            const file = files[0];
             const reader = new FileReader();
+            
             reader.onload = (event) => {
                 document.getElementById('image-preview').src = event.target.result;
                 document.getElementById('preview-container').classList.remove('hidden');
@@ -71,22 +118,28 @@
             };
             reader.readAsDataURL(file);
         });
+
+        // ボタンが押されたときの処理
         document.getElementById('analyze-button').addEventListener('click', () => {
             if (!selectedImage) return;
+
             document.getElementById('analyze-button').disabled = true;
             document.getElementById('status-message').classList.remove('hidden');
             document.getElementById('result-container').classList.add('hidden');
+
             setTimeout(() => {
                 document.getElementById('status-message').classList.add('hidden');
                 document.getElementById('result-container').classList.remove('hidden');
+
                 const advices = [
                     "📋 AIからのオンデバイス分析アドバイス：\n\n1. 床や机の上の「平面」にある物を減らしましょう\nまずは目につく大きな物（本や衣類、書類など）を定位置に戻すだけで、部屋全体の視覚的なノイズが消えて一気にスッキリ見えます。\n\n2. 収納スペースの「定位置」を決めましょう\nよく使うものは取り出しやすい手前の位置に、あまり使わないものはボックスにまとめてクローゼットや棚へしまいましょう。\n\n3. 部屋の移動導線を確保しましょう\n部屋の入り口から奥までの通路に障害物が置かれていませんか？スムーズに歩けるスペースを作ることで、生活しやすく開放的な空間になります。",
                     "📋 AIからのオンデバイス分析アドバイス：\n\n1. 小物の整理整頓とトレイの活用\nリモコンやスマホの充電器、鍵などの細々とした小物を1つのオシャレなトレイにまとめるだけで、散らかった印象が完全になくなります。\n\n2. 「ついで掃除」の習慣化\n現在の状態をさらに引き立てるために、部屋を出るときに1つだけゴミを捨てる、机を拭くといった「1日5分のついで掃除」を取り入れてみましょう。\n\n3. 窓際のスッキリ化と光の取り込み\n窓の周りに置いてある荷物を移動させ、外からの自然光を部屋全体に取り入れると、空間が明るくなり部屋全体が広く清潔に見えるようになります。"
                 ];
+
                 const selectedAdvice = Math.random() > 0.5 ? advices[0] : advices[1];
                 document.getElementById('ai-response').innerText = selectedAdvice;
                 document.getElementById('analyze-button').disabled = false;
-            }, 2000);
+            }, 2000); // 2秒の分析演出のあとにアドバイスを表示
         });
     </script>
 </body>
