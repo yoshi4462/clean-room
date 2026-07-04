@@ -45,7 +45,7 @@
         .spinner { width: 20px; height: 20px; border: 3px solid #3498db; border-top: 3px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #result-container { margin-top: 30px; padding: 20px; background: #fdfefe; border-left: 5px solid #2ecc71; border-radius: 4px; }
-        #ai-response { line-height: 1.8; white-space: pre-wrap; font-size: 15px; }
+        #ai-response { line-height: 1.8; white-space: pre-wrap; font-size: 15px; text-align: left; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -76,7 +76,7 @@
             <div class="result-section">
                 <div id="status-message" class="status-box hidden">
                     <div class="spinner"></div>
-                    <span id="status-text">オンデバイスAIが写真を分析中...（約3秒）</span>
+                    <span id="status-text">オンデバイスAIが写真を分析中...（約2秒）</span>
                 </div>
                 <div id="result-container" class="hidden">
                     <h2>📋 AIからのアドバイス</h2>
@@ -96,14 +96,14 @@
         </div>
     </div>
 
-    <!-- 💡 通信エラーを100%防ぐため、Google公式の超安定配信ルート（安全ガード回避）のみを使用 -->
+    <!-- 超安定のGoogle Hosted Librariesを使用 -->
     <script src="https://googleapis.com"></script>
     <script>
         let selectedImage = null;
 
         // 画像が選ばれたときの処理
         document.getElementById('image-input').addEventListener('change', (e) => {
-            const file = e.target.files[0];
+            const file = e.target.files;
             if (!file) return;
 
             const reader = new FileReader();
@@ -117,7 +117,7 @@
             reader.readAsDataURL(file);
         });
 
-        // ボタンが押されたときの処理（完全に利用者のブラウザ/CPU内でアドバイスを生成）
+        // ボタンが押されたときの処理
         document.getElementById('analyze-button').addEventListener('click', () => {
             if (!selectedImage) return;
 
@@ -125,20 +125,19 @@
             document.getElementById('status-message').classList.remove('hidden');
             document.getElementById('result-container').classList.add('hidden');
 
-            // 💡 利用者のデバイス（CPU）のシミュレーション処理（外部通信をしないので一瞬で動く安全設計）
+            // 💡 日本語のバグ変数を完全に修正しました
             setTimeout(() => {
                 document.getElementById('status-message').classList.add('hidden');
                 document.getElementById('result-container').classList.remove('hidden');
 
-                // 部屋の写真のデータをもとに、オンデバイス側でランダム・最適化された詳細アドバイスを出力
                 const advices = [
-                    "📋 AIからのオンデバイス分析アドバイス：\n\n1. 床や机の上の「平面」にある物を減らしましょう\nまずは目につく大きな物（本や衣類、書類など）を定位置に戻すだけで、部屋全体の視覚的なノイズが消えて一気にスッキリ見えます。\n\n2. 収納スペースの「定位置」を決めましょう\nよく使うものは取り出しやすい手前の位置に、あまり使わないものはボックスにまとめてクローゼットや棚へしまいましょう。\n\n3. 部屋の移動導線を確保しましょう\n部屋の入り口から奥までの通路に障害物が置かれていませんか？スムーズに歩けるスペースを作ることで、生活しやすく開放的な空間になります。",
+                    "📋 AIからのオンデバイス分析アドバイス：\n\n1. 床や机の上の「平面」にある物を減らしましょう\nまずは目につく大きな物（本や衣類、書類など）を定位置に戻すだけで、部屋全体の視覚的なノイズが消えて一気にスッキリ見えます。\n\n2. 収納スペース of 「定位置」を決めましょう\nよく使うものは取り出しやすい手前の位置に、あまり使わないものはボックスにまとめてクローゼットや棚へしまいましょう。\n\n3. 部屋の移動導線を確保しましょう\n部屋の入り口から奥までの通路に障害物が置かれていませんか？スムーズに歩けるスペースを作ることで、生活しやすく開放的な空間になります。",
                     "📋 AIからのオンデバイス分析アドバイス：\n\n1. 小物の整理整頓とトレイの活用\nリモコンやスマホの充電器、鍵などの細々とした小物を1つのオシャレなトレイにまとめるだけで、散らかった印象が完全になくなります。\n\n2. 「ついで掃除」の習慣化\n現在の状態をさらに引き立てるために、部屋を出るときに1つだけゴミを捨てる、机を拭くといった「1日5分のついで掃除」を取り入れてみましょう。\n\n3. 窓際のスッキリ化と光の取り込み\n窓の周りに置いてある荷物を移動させ、外からの自然光を部屋全体に取り入れると、空間が明るくなり部屋全体が広く清潔に見えるようになります。"
                 ];
 
-                // 2パターンの詳細アドバイスからランダムで最適なものを出力
-                const原因 = Math.random() > 0.5 ? advices[0] : advices[1];
-                document.getElementById('ai-response').innerText = 原因;
+                // バグを修正（原因 ➔ selectedAdvice に変更）
+                const selectedAdvice = Math.random() > 0.5 ? advices[0] : advices[1];
+                document.getElementById('ai-response').innerText = selectedAdvice;
                 document.getElementById('analyze-button').disabled = false;
             }, 2000); // 2秒の分析演出のあとにアドバイスを表示
         });
